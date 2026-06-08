@@ -1,5 +1,7 @@
 from socket import *
 import sys
+import json
+import threading
 
 client_socket = socket(AF_INET, SOCK_STREAM)
 server_name = input("input the IP address to be used: ")
@@ -9,9 +11,17 @@ server_address = (server_name, server_port)
 print('connecting to server at %s port %s' % server_address)
 client_socket.connect(server_address)
 
-while True:
-    message = input("enter message:")
-    client_socket.send(message.encode())
+def listen():
+    while True:
+        data = client_socket.recv(1024)
+        msg = json.loads(data.decode())
+        print(msg["content"])
 
-    response = client_socket.recv(1024)
-    print(f"recieved: {response.decode()}")
+listener = threading.Thread(target=listen)
+listener.daemon = True
+listener.start()
+
+while True:
+    message = input()
+    msg = {"type": "message", "content": message}
+    client_socket.send(json.dumps(msg).encode())

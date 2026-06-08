@@ -1,4 +1,7 @@
 from socket import *
+import game
+import threading
+import json
 
 server_socket = socket(AF_INET, SOCK_STREAM)
 port = 6789
@@ -19,9 +22,24 @@ print("waiting for player 2...")
 conn2, addr2 = server_socket.accept()
 print("player 2 connected:", addr2)
 
-while True:
-    data = conn1.recv(1024)
-    conn2.send(data)
+p1_board = game.Board()
+p2_board = game.Board()
 
-    data = conn2.recv(1024)
-    conn1.send(data)
+def handle_client(conn, other_conn):
+    while True:
+        data = conn.recv(1024)
+        if not data:
+            print("a player disconnected")
+            break
+        msg = json.loads(data.decode())
+        other_conn.send(json.dumps(msg).encode())
+
+t1 = threading.Thread(target=handle_client, args=(conn1, conn2))
+t2 = threading.Thread(target=handle_client, args=(conn2, conn1))
+t1.daemon = True
+t2.daemon = True
+t1.start()
+t2.start()
+
+t1.join()
+t2.join()
