@@ -3,6 +3,8 @@ import game
 import threading
 import json
 
+players_ready = [0]
+
 server_socket = socket(AF_INET, SOCK_STREAM)
 port = 6789
 hostname = gethostname()
@@ -25,17 +27,40 @@ print("player 2 connected:", addr2)
 p1_board = game.Board()
 p2_board = game.Board()
 
-def handle_client(conn, other_conn):
+grid = p1_board.grid
+
+start_msg = {"type": "start_placing", "grid": grid}
+conn1.send(json.dumps(start_msg).encode())
+conn2.send(json.dumps(start_msg).encode())
+
+
+def handle_client(conn, other_conn, my_board, other_board):
     while True:
+        global players_ready
         data = conn.recv(1024)
         if not data:
             print("a player disconnected")
             break
         msg = json.loads(data.decode())
-        other_conn.send(json.dumps(msg).encode())
 
-t1 = threading.Thread(target=handle_client, args=(conn1, conn2))
-t2 = threading.Thread(target=handle_client, args=(conn2, conn1))
+        if msg["type"] == "place":
+            result = my_board.place_ship(msg["ship_type"],msg["position"],msg["direction"])
+            new_msg = {"type": "message", "content": result }
+            conn.send(json.dumps(new_msg).encode())
+        elif msg["type"] == "done_placing":
+            players_ready[0] += 1
+            if players_ready[0] != 2:
+                new_msg = {"type": "message", "content": "waiting on other player to place ships"}
+                conn.send(json.dumps(new_msg).encode())
+            else:
+                new_msg = {"type": "message", "content": "starting game, good luck!"}
+                conn.send(json.dumps(new_msg).encode())
+                other_conn.send(json.dumps(new_msg).encode())
+
+
+
+t1 = threading.Thread(target=handle_client, args=(conn1, conn2, p1_board, p2_board))
+t2 = threading.Thread(target=handle_client, args=(conn2, conn1, p2_board, p1_board))
 t1.daemon = True
 t2.daemon = True
 t1.start()

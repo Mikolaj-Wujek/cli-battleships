@@ -2,6 +2,14 @@ from socket import *
 import sys
 import json
 import threading
+from rich.table import Table
+from rich import print
+
+placement_phase = threading.Event()
+ships = ["carrier","battleship","cruiser","submarine","destroyer"]
+
+placement_response = threading.Event()
+last_result = [None]         #RETURN TO THIS
 
 client_socket = socket(AF_INET, SOCK_STREAM)
 server_name = input("input the IP address to be used: ")
@@ -11,17 +19,45 @@ server_address = (server_name, server_port)
 print('connecting to server at %s port %s' % server_address)
 client_socket.connect(server_address)
 
+def display(grid):
+    table = Table()
+    table.add_column(" ")  # for row letters
+    for i in range(1, 11):
+        table.add_column(str(i))
+    
+    letters = "ABCDEFGHIJ"
+    for i in range(10):
+        table.add_row(letters[i], *grid[i])
+    
+    print(table)
+
 def listen():
     while True:
-        data = client_socket.recv(1024)
+        data = client_socket.recv(4096)
         msg = json.loads(data.decode())
-        print(msg["content"])
+        if msg["type"] == "message":
+            print(msg["content"])
+
+        if msg["type"] == "start_placing":
+            display(msg["grid"])
+            placement_phase.set()
+        
 
 listener = threading.Thread(target=listen)
 listener.daemon = True
 listener.start()
 
-while True:
-    message = input()
-    msg = {"type": "message", "content": message}
+
+placement_phase.wait()
+print("please begin placing your ships\nPlease enter the starting coordinate aswell as direction\nEXAMPLE: \nC4\nH")
+for ship in ships:
+    print(ship,":")
+    coord = str(input("Coordinate:"))
+    direction = str(input("Direction:"))
+    msg = {"type": "place", "ship_type": ship, "position": coord, "direction":direction}
     client_socket.send(json.dumps(msg).encode())
+
+
+
+
+
