@@ -33,14 +33,21 @@ def display(grid):
 
 def listen():
     while True:
-        data = client_socket.recv(4096)
-        msg = json.loads(data.decode())
-        if msg["type"] == "message":
-            print(msg["content"])
-
-        if msg["type"] == "start_placing":
-            display(msg["grid"])
-            placement_phase.set()
+        try:
+            data = client_socket.recv(4096)
+            msg = json.loads(data.decode())
+            if msg["type"] == "message":
+                print(msg["content"])
+            elif msg["type"] == "start_placing":
+                display(msg["grid"])
+                placement_phase.set()
+            elif msg["type"] == "place_result":
+                last_result[0] = msg["content"]
+                display(msg["grid"])
+                placement_response.set()
+        except Exception as e:
+            print("listener error:", e)
+            break
         
 
 listener = threading.Thread(target=listen)
@@ -51,11 +58,16 @@ listener.start()
 placement_phase.wait()
 print("please begin placing your ships\nPlease enter the starting coordinate aswell as direction\nEXAMPLE: \nC4\nH")
 for ship in ships:
-    print(ship,":")
-    coord = str(input("Coordinate:"))
-    direction = str(input("Direction:"))
-    msg = {"type": "place", "ship_type": ship, "position": coord, "direction":direction}
-    client_socket.send(json.dumps(msg).encode())
+    while last_result[0] != "ship placed successfully":
+        last_result[0] = None
+        print(ship,":")
+        coord = str(input("Coordinate:"))
+        direction = str(input("Direction:"))
+        msg = {"type": "place", "ship_type": ship, "position": coord, "direction":direction}
+        client_socket.send(json.dumps(msg).encode())
+        placement_response.wait()
+        placement_response.clear()
+        print(last_result[0])
 
 
 

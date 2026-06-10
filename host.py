@@ -37,7 +37,7 @@ conn2.send(json.dumps(start_msg).encode())
 def handle_client(conn, other_conn, my_board, other_board):
     while True:
         global players_ready
-        data = conn.recv(1024)
+        data = conn.recv(4096)
         if not data:
             print("a player disconnected")
             break
@@ -45,7 +45,8 @@ def handle_client(conn, other_conn, my_board, other_board):
 
         if msg["type"] == "place":
             result = my_board.place_ship(msg["ship_type"],msg["position"],msg["direction"])
-            new_msg = {"type": "message", "content": result }
+            grid = my_board.grid
+            new_msg = {"type": "place_result", "content": result, "grid": grid}
             conn.send(json.dumps(new_msg).encode())
         elif msg["type"] == "done_placing":
             players_ready[0] += 1
