@@ -51,10 +51,10 @@ def handle_client(conn, other_conn, my_board, other_board):
         elif msg["type"] == "done_placing":
             players_ready[0] += 1
             if players_ready[0] != 2:
-                new_msg = {"type": "message", "content": "waiting on other player to place ships"}
+                new_msg = {"type": "onedone", "content": "waiting on other player to place ships"}
                 conn.send(json.dumps(new_msg).encode())
             else:
-                new_msg = {"type": "message", "content": "starting game, good luck!"}
+                new_msg = {"type": "game_starting", "content": "starting game, good luck!"}
                 conn.send(json.dumps(new_msg).encode())
                 other_conn.send(json.dumps(new_msg).encode())
 

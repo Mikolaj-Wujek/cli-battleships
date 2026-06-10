@@ -11,6 +11,8 @@ ships = ["carrier","battleship","cruiser","submarine","destroyer"]
 placement_response = threading.Event()
 last_result = [None]         #RETURN TO THIS
 
+game_start = threading.Event()
+
 client_socket = socket(AF_INET, SOCK_STREAM)
 server_name = input("input the IP address to be used: ")
 server_port = int(input("enter the port number to be used: "))
@@ -45,6 +47,11 @@ def listen():
                 last_result[0] = msg["content"]
                 display(msg["grid"])
                 placement_response.set()
+            elif msg["type"] == "onedone":
+                print(msg["content"])
+            elif msg["type"] == "game_starting":
+                print(msg["content"])
+                game_start.set()
         except Exception as e:
             print("listener error:", e)
             break
@@ -58,8 +65,8 @@ listener.start()
 placement_phase.wait()
 print("please begin placing your ships\nPlease enter the starting coordinate aswell as direction\nEXAMPLE: \nC4\nH")
 for ship in ships:
+    last_result[0] = None
     while last_result[0] != "ship placed successfully":
-        last_result[0] = None
         print(ship,":")
         coord = str(input("Coordinate:"))
         direction = str(input("Direction:"))
@@ -68,7 +75,9 @@ for ship in ships:
         placement_response.wait()
         placement_response.clear()
         print(last_result[0])
-
+msg = {"type": "done_placing"}
+client_socket.send(json.dumps(msg).encode())
+game_start.wait()
 
 
 
