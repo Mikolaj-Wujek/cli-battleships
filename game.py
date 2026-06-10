@@ -14,19 +14,21 @@ class Board:
 
     def place_ship(self, ship_type, position, direction):
         row = ord(position[0].upper()) - ord('A')
-        if row > 9:
+        if row >= 10:
             return "ship placed out of bounds"
         col = int(position[1:]) - 1
-        if col > 9:
+        if col < 0:
+            return "shot placed out of bounds"
+        if col >= 10:
             return "ship placed out of bounds"
         size = self.ships[ship_type]
         direction = direction.upper()
 
         if direction == "H":
-            if (col + size) > 9:
+            if (col + size) >= 10:
                 return "ship placed out of bounds"
         elif direction == "V":
-            if (row + size) > 9:
+            if (row + size) >= 10:
                 return "ship placed out of bounds"
         
         for coord in range(size):
@@ -48,13 +50,21 @@ class Board:
             self.grid[r][c] = "S"
         return "ship placed successfully"
     
-    def receive_shot(self, row, col):
+    def receive_shot(self, position):
+        row = ord(position[0].upper()) - ord('A')
+        if row >= 10:
+            return "shot placed out of bounds"
+        col = int(position[1:]) - 1
+        if col < 0:
+            return "shot placed out of bounds"
+        if col >= 10:
+            return "shot placed out of bounds"
         if self.grid[row][col] == "S":
             self.grid[row][col] = "X"
-            return True
+            return "hit"
         elif self.grid[row][col] == "•":
             self.grid[row][col] = "O"
-            return False
+            return "miss"
         else:
             return "already shot"
         

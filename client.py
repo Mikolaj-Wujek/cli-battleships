@@ -13,6 +13,10 @@ last_result = [None]         #RETURN TO THIS
 
 game_start = threading.Event()
 
+my_turn = threading.Event()
+shot_response = threading.Event()
+last_shot_result = [None]
+
 client_socket = socket(AF_INET, SOCK_STREAM)
 server_name = input("input the IP address to be used: ")
 server_port = int(input("enter the port number to be used: "))
@@ -52,6 +56,17 @@ def listen():
             elif msg["type"] == "game_starting":
                 print(msg["content"])
                 game_start.set()
+            elif msg["type"] == "your_turn":
+                print("Your turn")
+                if "grid" in msg:
+                    display(msg["grid"])
+                my_turn.set()
+            elif msg["type"] == "shot_result":
+                last_shot_result[0] = msg["content"]
+                print(msg["message"])
+                shot_response.set()
+
+
         except Exception as e:
             print("listener error:", e)
             break
@@ -79,6 +94,16 @@ msg = {"type": "done_placing"}
 client_socket.send(json.dumps(msg).encode())
 game_start.wait()
 
+while True:
+    my_turn.wait()
+    last_shot_result[0] = None
+    while last_shot_result[0] != "valid":
+        shot = str(input("enter your shot coordinates:"))
+        msg = {"type": "shot", "position": shot}
+        client_socket.send(json.dumps(msg).encode())
+        shot_response.wait()
+        shot_response.clear()
+    my_turn.clear()
 
 
 

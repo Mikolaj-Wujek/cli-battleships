@@ -4,6 +4,7 @@ import threading
 import json
 
 players_ready = [0]
+current_turn = [1]
 
 server_socket = socket(AF_INET, SOCK_STREAM)
 port = 6789
@@ -34,7 +35,7 @@ conn1.send(json.dumps(start_msg).encode())
 conn2.send(json.dumps(start_msg).encode())
 
 
-def handle_client(conn, other_conn, my_board, other_board):
+def handle_client(conn, other_conn, my_board, other_board, player):
     while True:
         global players_ready
         data = conn.recv(4096)
@@ -57,11 +58,31 @@ def handle_client(conn, other_conn, my_board, other_board):
                 new_msg = {"type": "game_starting", "content": "starting game, good luck!"}
                 conn.send(json.dumps(new_msg).encode())
                 other_conn.send(json.dumps(new_msg).encode())
+                new_msg = {"type": "your_turn"}
+                conn1.send(json.dumps(new_msg).encode())
+                new_msg = {"type": "message", "content": "other players turn..."}
+                conn2.send(json.dumps(new_msg).encode())
+
+        elif msg["type"] == "shot":
+            if current_turn[0] != player:
+                continue
+            result = other_board.receive_shot(msg["position"])
+            if result not in ["hit", "miss"]:
+                new_msg = {"type": "shot_result", "content": "invalid", "message": result}
+                conn.send(json.dumps(new_msg).encode())
+                continue
+            new_msg = {"type": "shot_result", "content": "valid", "message": result}
+            conn.send(json.dumps(new_msg).encode())
+            current_turn[0] = 2 if player == 1 else 1
+            grid = other_board.grid
+            new_msg = {"type": "your_turn", "grid": grid}
+            other_conn.send(json.dumps(new_msg).encode())
 
 
 
-t1 = threading.Thread(target=handle_client, args=(conn1, conn2, p1_board, p2_board))
-t2 = threading.Thread(target=handle_client, args=(conn2, conn1, p2_board, p1_board))
+
+t1 = threading.Thread(target=handle_client, args=(conn1, conn2, p1_board, p2_board, 1))
+t2 = threading.Thread(target=handle_client, args=(conn2, conn1, p2_board, p1_board, 2))
 t1.daemon = True
 t2.daemon = True
 t1.start()
