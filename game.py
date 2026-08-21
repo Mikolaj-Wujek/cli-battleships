@@ -1,3 +1,5 @@
+#game
+
 from rich.table import Table
 from rich import print
 
@@ -12,15 +14,28 @@ class Board:
             "destroyer": 2
         }
 
+    def parse_position(self, position):
+        """Returns (row, col) on success, or None if invalid."""
+        if not position or len(position) < 2:
+            return None
+        letter = position[0].upper()
+        if letter not in "ABCDEFGHIJ":
+            return None
+        try:
+            col = int(position[1:]) - 1
+        except ValueError:
+            return None
+        row = ord(letter) - ord('A')
+        if not (0 <= row < 10) or not (0 <= col < 10):
+            return None
+        return row, col
+
     def place_ship(self, ship_type, position, direction):
-        row = ord(position[0].upper()) - ord('A')
-        if row >= 10:
+        parsed = self.parse_position(position)
+        if parsed is None:
             return "ship placed out of bounds"
-        col = int(position[1:]) - 1
-        if col < 0:
-            return "shot placed out of bounds"
-        if col >= 10:
-            return "ship placed out of bounds"
+        row, col = parsed
+
         size = self.ships[ship_type]
         direction = direction.upper()
 
@@ -51,14 +66,11 @@ class Board:
         return "ship placed successfully"
     
     def receive_shot(self, position):
-        row = ord(position[0].upper()) - ord('A')
-        if row >= 10:
+        parsed = self.parse_position(position)
+        if parsed is None:
             return "shot placed out of bounds"
-        col = int(position[1:]) - 1
-        if col < 0:
-            return "shot placed out of bounds"
-        if col >= 10:
-            return "shot placed out of bounds"
+        row, col = parsed
+
         if self.grid[row][col] == "S":
             self.grid[row][col] = "X"
             return "hit"
@@ -95,3 +107,6 @@ if __name__ == "__main__":
     print(b.is_game_over())
 
     b.display()
+
+
+    #DIRECTION DEFAULT VERTICAL : FIX?

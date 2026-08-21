@@ -1,3 +1,5 @@
+#host
+
 from socket import *
 import game
 import threading
